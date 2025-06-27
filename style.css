@@ -1,13 +1,12 @@
 body {
-  background-color: #111;
-  color: #fff;
-  font-family: sans-serif;
-  text-align: center;
   margin: 0;
-  padding: 20px;
+  background-color: #000;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
 }
 
 #chart {
-  margin: 0 auto;
-  max-width: 1000px;
+  width: 100vw;
+  height: 90vh;
 }
