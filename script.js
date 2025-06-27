@@ -1,31 +1,60 @@
+async function fetchData() {
+  try {
+    const response = await fetch("https://btc-logger-trxi.onrender.com/data.csv");
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    const text = await response.text();
+    const rows = text.trim().split("\n").slice(1);
+    const parsedData = rows.map(row => {
+      const [timestamp, price, bid, ask, spread, volume] = row.split(",");
+      return {
+        time: Math.floor(new Date(timestamp).getTime() / 1000),
+        value: parseFloat(spread),
+      };
+    });
+
+    console.log("✅ Data fetched:", parsedData.slice(0, 5)); // log first 5
+    return parsedData;
+  } catch (err) {
+    const errorBox = document.getElementById("error");
+    if (errorBox) {
+      errorBox.textContent = "⚠️ Failed to load data: " + err.message;
+    }
+    console.error("❌ Fetch error:", err);
+    return [];
+  }
+}
+
 async function drawChart() {
   const chartContainer = document.getElementById("chart");
+  if (!chartContainer) {
+    document.body.innerHTML += "<div style='color:red'>❌ Chart container missing</div>";
+    return;
+  }
 
   const chart = LightweightCharts.createChart(chartContainer, {
-    layout: { background: { color: '#000' }, textColor: '#fff' },
+    layout: { textColor: '#fff', background: { type: 'solid', color: '#000' } },
     rightPriceScale: { visible: true },
     timeScale: { timeVisible: true, secondsVisible: true },
   });
 
-  const lineSeries = chart.addLineSeries({ color: 'lime', lineWidth: 2 });
+  const lineSeries = chart.addLineSeries({ color: 'red', lineWidth: 2 });
 
-  const testData = [
-    { time: 1719450000, value: 12 },
-    { time: 1719450060, value: 20 },
-    { time: 1719450120, value: 18 },
-    { time: 1719450180, value: 25 },
-    { time: 1719450240, value: 22 },
-  ];
+  const data = await fetchData();
+  if (data.length === 0) {
+    document.getElementById("error").textContent = "⚠️ No data to display.";
+    console.warn("⚠️ No data returned.");
+  } else {
+    lineSeries.setData(data);
+    console.log("📈 Chart rendered with data!");
+  }
 
-  lineSeries.setData(testData);
-
-  // Confirmation message
-  const msg = document.createElement("div");
-  msg.innerHTML = "✅ Chart loaded with test data";
-  msg.style.color = "yellow";
-  msg.style.textAlign = "center";
-  msg.style.padding = "10px";
-  document.body.appendChild(msg);
+  setInterval(async () => {
+    const updated = await fetchData();
+    if (updated.length > 0) {
+      lineSeries.setData(updated);
+    }
+  }, 60000);
 }
 
+console.log("📦 script.js loaded!");
 drawChart();
