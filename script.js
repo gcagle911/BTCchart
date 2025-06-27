@@ -1,10 +1,20 @@
+function logToPage(message, color = 'yellow') {
+  const box = document.getElementById("error");
+  if (box) {
+    box.innerHTML += `<div style="color:${color}">${message}</div>`;
+  }
+}
+
 async function fetchData() {
   try {
+    logToPage("📡 Fetching CSV...", "lightblue");
+
     const response = await fetch("https://btc-logger-trxi.onrender.com/data.csv");
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
     const text = await response.text();
     const rows = text.trim().split("\n").slice(1);
-    const parsedData = rows.map(row => {
+    const data = rows.map(row => {
       const [timestamp, price, bid, ask, spread, volume] = row.split(",");
       return {
         time: Math.floor(new Date(timestamp).getTime() / 1000),
@@ -12,14 +22,12 @@ async function fetchData() {
       };
     });
 
-    console.log("✅ Data fetched:", parsedData.slice(0, 5)); // log first 5
-    return parsedData;
+    logToPage(`✅ Loaded ${data.length} points`, "lightgreen");
+    return data;
+
   } catch (err) {
-    const errorBox = document.getElementById("error");
-    if (errorBox) {
-      errorBox.textContent = "⚠️ Failed to load data: " + err.message;
-    }
-    console.error("❌ Fetch error:", err);
+    logToPage("❌ Fetch failed: " + err.message, "red");
+    console.error(err);
     return [];
   }
 }
@@ -27,9 +35,11 @@ async function fetchData() {
 async function drawChart() {
   const chartContainer = document.getElementById("chart");
   if (!chartContainer) {
-    document.body.innerHTML += "<div style='color:red'>❌ Chart container missing</div>";
+    logToPage("❌ Chart container missing", "red");
     return;
   }
+
+  logToPage("📊 Creating chart...", "orange");
 
   const chart = LightweightCharts.createChart(chartContainer, {
     layout: { textColor: '#fff', background: { type: 'solid', color: '#000' } },
@@ -41,20 +51,19 @@ async function drawChart() {
 
   const data = await fetchData();
   if (data.length === 0) {
-    document.getElementById("error").textContent = "⚠️ No data to display.";
-    console.warn("⚠️ No data returned.");
+    logToPage("⚠️ No data to display", "yellow");
   } else {
     lineSeries.setData(data);
-    console.log("📈 Chart rendered with data!");
+    logToPage("✅ Chart data plotted", "lightgreen");
   }
 
   setInterval(async () => {
     const updated = await fetchData();
     if (updated.length > 0) {
       lineSeries.setData(updated);
+      logToPage("🔄 Chart updated", "lightblue");
     }
   }, 60000);
 }
 
-console.log("📦 script.js loaded!");
 drawChart();
