@@ -3,18 +3,22 @@ async function fetchData() {
     const response = await fetch("https://btc-logger-trxi.onrender.com/data.csv");
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
     const text = await response.text();
+
     const rows = text.trim().split("\n").slice(1);
+    if (rows.length === 0) throw new Error("CSV is empty");
+
     return rows.map(row => {
       const [timestamp, price, bid, ask, spread, volume] = row.split(",");
+      if (!timestamp || isNaN(parseFloat(spread))) return null;
       return {
         time: Math.floor(new Date(timestamp).getTime() / 1000),
         value: parseFloat(spread),
       };
-    });
+    }).filter(Boolean);
   } catch (err) {
     const errorBox = document.getElementById("error");
     if (errorBox) {
-      errorBox.textContent = "⚠️ Failed to load data: " + err.message;
+      errorBox.textContent = "⚠️ Error loading data: " + err.message;
     }
     console.error("Fetch error:", err);
     return [];
@@ -23,10 +27,7 @@ async function fetchData() {
 
 async function drawChart() {
   const chartContainer = document.getElementById("chart");
-  if (!chartContainer) {
-    document.body.innerHTML += "<div style='color:red'>❌ Chart container missing</div>";
-    return;
-  }
+  const errorBox = document.getElementById("error");
 
   const chart = LightweightCharts.createChart(chartContainer, {
     layout: { textColor: '#fff', background: { type: 'solid', color: '#000' } },
@@ -38,7 +39,7 @@ async function drawChart() {
 
   const data = await fetchData();
   if (data.length === 0) {
-    document.getElementById("error").textContent = "⚠️ No data to display.";
+    errorBox.textContent = "⚠️ No valid data found in CSV.";
   } else {
     lineSeries.setData(data);
   }
