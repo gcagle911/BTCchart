@@ -3,7 +3,7 @@ async function fetchData() {
     const response = await fetch("https://btc-logger-trxi.onrender.com/data.csv");
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
     const text = await response.text();
-    const rows = text.trim().split("\n").slice(1); // skip header
+    const rows = text.trim().split("\n").slice(1);
     return rows.map(row => {
       const [timestamp, price, bid, ask, spread, volume] = row.split(",");
       return {
@@ -12,13 +12,23 @@ async function fetchData() {
       };
     });
   } catch (err) {
-    console.error("Failed to fetch CSV:", err);
+    const errorBox = document.getElementById("error");
+    if (errorBox) {
+      errorBox.textContent = "⚠️ Failed to load data: " + err.message;
+    }
+    console.error("Fetch error:", err);
     return [];
   }
 }
 
 async function drawChart() {
-  const chart = LightweightCharts.createChart(document.getElementById("chart"), {
+  const chartContainer = document.getElementById("chart");
+  if (!chartContainer) {
+    document.body.innerHTML += "<div style='color:red'>❌ Chart container missing</div>";
+    return;
+  }
+
+  const chart = LightweightCharts.createChart(chartContainer, {
     layout: { textColor: '#fff', background: { type: 'solid', color: '#000' } },
     rightPriceScale: { visible: true },
     timeScale: { timeVisible: true, secondsVisible: true },
@@ -28,15 +38,15 @@ async function drawChart() {
 
   const data = await fetchData();
   if (data.length === 0) {
-    document.body.innerHTML = "<h2 style='color:white; text-align:center;'>No data loaded. Check console.</h2>";
+    document.getElementById("error").textContent = "⚠️ No data to display.";
   } else {
     lineSeries.setData(data);
   }
 
   setInterval(async () => {
-    const updatedData = await fetchData();
-    if (updatedData.length > 0) {
-      lineSeries.setData(updatedData);
+    const updated = await fetchData();
+    if (updated.length > 0) {
+      lineSeries.setData(updated);
     }
   }, 60000);
 }
