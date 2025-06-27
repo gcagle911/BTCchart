@@ -1,34 +1,44 @@
-function loadDataAndDrawChart() {
-  fetch('https://your-logger-url/render/path/to/data.csv')  // ← use your real CSV link
-    .then(response => response.text())
-    .then(csv => {
-      const lines = csv.trim().split('\n').slice(1); // skip header
-      const data = lines.map(line => {
-        const [timestamp, , , , spread] = line.split(',');
-        return {
-          time: Math.floor(new Date(timestamp).getTime() / 1000),
-          value: parseFloat(spread),
-        };
-      });
-
-      const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-        width: window.innerWidth * 0.95,
-        height: 500,
-      });
-
-      const series = chart.addLineSeries({
-        color: 'purple',
-        lineWidth: 2,
-      });
-
-      series.setData(data);
+async function fetchData() {
+  try {
+    const response = await fetch("https://btc-logger-trxi.onrender.com/data.csv");
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    const text = await response.text();
+    const rows = text.trim().split("\n").slice(1); // skip header
+    return rows.map(row => {
+      const [timestamp, price, bid, ask, spread, volume] = row.split(",");
+      return {
+        time: Math.floor(new Date(timestamp).getTime() / 1000),
+        value: parseFloat(spread),
+      };
     });
+  } catch (err) {
+    console.error("Failed to fetch CSV:", err);
+    return [];
+  }
 }
 
-loadDataAndDrawChart();
+async function drawChart() {
+  const chart = LightweightCharts.createChart(document.getElementById("chart"), {
+    layout: { textColor: '#fff', background: { type: 'solid', color: '#000' } },
+    rightPriceScale: { visible: true },
+    timeScale: { timeVisible: true, secondsVisible: true },
+  });
 
-// Refresh every 30 seconds
-setInterval(() => {
-  document.getElementById('chart').innerHTML = '';
-  loadDataAndDrawChart();
-}, 30000);
+  const lineSeries = chart.addLineSeries({ color: 'red', lineWidth: 2 });
+
+  const data = await fetchData();
+  if (data.length === 0) {
+    document.body.innerHTML = "<h2 style='color:white; text-align:center;'>No data loaded. Check console.</h2>";
+  } else {
+    lineSeries.setData(data);
+  }
+
+  setInterval(async () => {
+    const updatedData = await fetchData();
+    if (updatedData.length > 0) {
+      lineSeries.setData(updatedData);
+    }
+  }, 60000);
+}
+
+drawChart();
