@@ -1,0 +1,13 @@
+body {
+  background-color: #111;
+  color: #fff;
+  font-family: sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
+
+#chart {
+  margin: 0 auto;
+  max-width: 1000px;
+}
